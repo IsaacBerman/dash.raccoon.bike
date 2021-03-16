@@ -4,6 +4,7 @@ import dash_html_components as html
 
 import json
 import datetime as dt
+import requests
 
 import bikeraccoon as br
 
@@ -46,6 +47,13 @@ def system_page(sys_name):
                     make_station_map(api)
                 ]),
             ]),
+
+            dbc.Row([
+                dbc.Col(width=12, children=[
+                    make_top_stations(api)
+                ])
+
+            ])
         ]),
     ])
 
@@ -80,14 +88,23 @@ def make_hourly_graph(api):
 def make_station_map(api):
 
     sdf = api.get_stations()
+    bdf = api.query_free_bikes()
 
+    # Get city location from OSM API
+    city = api.info['city']
+    country = api.info['country']
+    r = requests.get(f"https://nominatim.openstreetmap.org/search?city={city}&country={country}&format=json")
+    r = r.json()[0]
+    print(r)
+    lat = float(r['lat'])
+    lon = float(r['lon'])
     maplayout = go.Layout(mapbox_style="light",
                           mapbox=go.layout.Mapbox(
                             accesstoken=MAPBOX_TOKEN,
                             bearing=0,
                             center=go.layout.mapbox.Center(
-                            lat=sdf.lat.mean(),
-                            lon=sdf.lon.mean()
+                            lat=lat,
+                            lon=lon
                             ),
                             zoom=11.5
                             ),
@@ -98,22 +115,82 @@ def make_station_map(api):
                          )
 
 
+    mapdata = [go.Scattermapbox()]
 
-    mapdata = go.Scattermapbox(lat=sdf['lat'],
-                               lon=sdf['lon'],
-                               text=sdf['name'],
-                               hoverinfo='text',
+    if sdf is not None:
+        stationdata = go.Scattermapbox(lat=sdf['lat'],
+                                   lon=sdf['lon'],
+                                   text=sdf['name'],
+                                   hoverinfo='text',
                                    marker={'color':'#0f0f0f',
                                             'size':6,
-                                            'symbol':'bicycle'
+                                #            'symbol':'bicycle'
                                 #           'size':trips_df['trips'],
                                 #           'sizemode':'area',
                                 #           'sizeref':2.*max(trips_df['trips'])/(40.**2),
                                 #           'sizemin':4
-                                })
+                                    })
+        mapdata.append(stationdata)
 
+    if bdf is not None:
+        bikedata = go.Scattermapbox(lat=bdf['lat'],
+                                   lon=bdf['lon'],
+                                   text=bdf['bike_id'],
+                                   hoverinfo='text',
+                                   marker={'color':'#0f0f0f',
+                                            'size':6,
+                                            'symbol':'bicycle'
+                                            })
+        mapdata.append(bikedata)
     fig = go.Figure(data=mapdata,layout=maplayout)
     return dcc.Graph(
         id='station-graph',
         figure=fig
     )
+
+
+
+def make_top_stations(api):
+    t1 = dt.datetime.now()
+    t2 = t1 - dt.timedelta(hours=24)
+    thdf = api.get_station_trips(t1,t2,freq='h',station='all')
+
+
+    top_stations = list(thdf.groupby('station').sum().sort_values('trips',ascending=False).index[:5])
+
+
+    print(top_stations)
+    thdf = thdf[thdf['station'].isin(top_stations)].pivot(values='trips',columns='station')
+
+    fig = px.line(thdf[top_stations],facet_row="station",facet_row_spacing=0.01)
+    print(fig.layout.annotations)
+    # hide and lock down axes
+    fig.update_xaxes(visible=False, fixedrange=True)
+    fig.update_yaxes(visible=False, fixedrange=True)
+
+    # remove facet/subplot labels
+    # annotations = []
+    #
+    # for i in range(5):
+    #     annotations.append(dict(xref='paper', x=0.1, y=i*2000 ,
+    #                                   xanchor='right', yanchor='middle',
+    #                                   text='Test 99%',
+    #                                   font=dict(family='Arial',
+    #                                             size=16),
+    #                                   showarrow=False))
+    # fig.update_layout(annotations=annotations, overwrite=True)
+    #fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+    fig.for_each_annotation(lambda a: a.update(textangle=0,x=0.05,y=a.y+0.05,text=a.text.split("=")[-1]))
+    # strip down the rest of the plot
+    fig.update_layout(
+        showlegend=False,
+        plot_bgcolor="white",
+        margin=dict(t=10,l=10,b=10,r=10)
+    )
+
+
+
+    return dcc.Graph(
+        id='stations-graph',
+        figure=fig
+        )
