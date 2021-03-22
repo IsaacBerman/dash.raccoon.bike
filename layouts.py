@@ -21,40 +21,86 @@ margin=go.layout.Margin(
     pad=0)
 
 
+
+
+
 def system_page(sys_name):
 
-    api = br.LiveAPI(sys_name)
+    api = br.LiveAPI(sys_name, echo=True)
 
-    sys_info = api.get_system_info()
+    sys_info = api.info
+
+    sdf = api.get_system_trips(t1=dt.datetime.now()-dt.timedelta(hours=24),t2=dt.datetime.now(),freq='d')
+
+    bdf = api.get_free_bike_trips(t1=dt.datetime.now()-dt.timedelta(hours=24),t2=dt.datetime.now(),freq='d')
 
 
-    layout = dbc.Row([
+    st_tab_disabled = True if sdf is None else False
+    fb_tab_disabled = True if bdf is None else False
 
-        dbc.Col(width=12, children=[
-            html.H1(f"{sys_info['brand']}"),
-            html.H3(f"{sys_info['city']}, {sys_info['country']}"),
-            html.Hr(),
+    print(bdf)
+    print(api.query_free_bikes())
+    station_tab = dbc.Tab(label='Stations', id='st-tab', disabled=st_tab_disabled, children=[
 
             dbc.Row([
-                dbc.Col(width=3, children=html.Span(json.dumps(sys_info, indent=4))),
-                dbc.Col(width=9, children=[
-                    make_daily_graph(api),
-                    make_hourly_graph(api)
-                ]),
-            ]),
-            dbc.Row([
+                #dbc.Col(width=3, children=html.Span(json.dumps(sys_info, indent=4))),
                 dbc.Col(width=12, children=[
                     make_station_map(api)
                 ]),
-            ]),
 
-            dbc.Row([
                 dbc.Col(width=12, children=[
+                    dbc.Row([
+                        dbc.Col(width=12, children=[
+                            make_daily_graph(api)
+                            ]),
+                        dbc.Col(width=12, children=[
+                            make_hourly_graph(api)
+                            ]),
+                    ]),
+                ]),
+
+
+                dbc.Col(width=4, children=[
                     make_top_stations(api)
                 ])
-
             ])
-        ]),
+        ])
+
+    free_bike_tab = dbc.Tab(label="Free bikes", id="fb-tab", disabled=fb_tab_disabled, children=[
+            bdf
+        ])
+
+    tabs = dcc.Tabs(
+        [
+            station_tab,
+            free_bike_tab
+        ]
+    )
+
+    tooltips = [
+        dbc.Tooltip("tooltip-text", target="st-tab"),
+        dbc.Tooltip("tooltip-text fb", target="fb-tab")
+    ]
+
+
+
+    #
+    # tooltips = [
+    #     dbc.Tooltip("Station data", target="st-tab"),
+    #     dbc.Tooltip("Floating bike data", target="fb-tab"),
+    #     ]
+
+
+    layout = dbc.Row([
+        dbc.Col([
+            html.H1(f"{sys_info['brand']}"),
+            html.H3(f"{sys_info['city']}, {sys_info['country']}"),
+            html.Hr(),
+            ]),
+
+        dbc.Col([tabs] + tooltips, width=12)
+
+
     ])
 
     return layout
@@ -95,7 +141,6 @@ def make_station_map(api):
     country = api.info['country']
     r = requests.get(f"https://nominatim.openstreetmap.org/search?city={city}&country={country}&format=json")
     r = r.json()[0]
-    print(r)
     lat = float(r['lat'])
     lon = float(r['lon'])
     maplayout = go.Layout(mapbox_style="light",
@@ -151,6 +196,9 @@ def make_station_map(api):
 
 
 def make_top_stations(api):
+
+    print("Start make top station", dt.datetime.now())
+
     t1 = dt.datetime.now()
     t2 = t1 - dt.timedelta(hours=24)
     thdf = api.get_station_trips(t1,t2,freq='h',station='all')
@@ -159,14 +207,13 @@ def make_top_stations(api):
     top_stations = list(thdf.groupby('station').sum().sort_values('trips',ascending=False).index[:5])
 
 
-    print(top_stations)
     thdf = thdf[thdf['station'].isin(top_stations)].pivot(values='trips',columns='station')
 
     fig = px.line(thdf[top_stations],facet_row="station",facet_row_spacing=0.01)
-    print(fig.layout.annotations)
+
     # hide and lock down axes
     fig.update_xaxes(visible=False, fixedrange=True)
-    fig.update_yaxes(visible=False, fixedrange=True)
+    fig.update_yaxes(visible=False)#, fixedrange=True)
 
     # remove facet/subplot labels
     # annotations = []
@@ -180,7 +227,9 @@ def make_top_stations(api):
     #                                   showarrow=False))
     # fig.update_layout(annotations=annotations, overwrite=True)
     #fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
-    fig.for_each_annotation(lambda a: a.update(textangle=0,x=0.05,y=a.y+0.05,text=a.text.split("=")[-1]))
+    fig.for_each_annotation(lambda a: a.update(textangle=0,x=0.05,y=a.y+0.05,
+                                                text=a.text.split("=")[-1],
+                                                ))
     # strip down the rest of the plot
     fig.update_layout(
         showlegend=False,
@@ -188,7 +237,7 @@ def make_top_stations(api):
         margin=dict(t=10,l=10,b=10,r=10)
     )
 
-
+    print("End make top station", dt.datetime.now())
 
     return dcc.Graph(
         id='stations-graph',
