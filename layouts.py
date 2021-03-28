@@ -37,15 +37,20 @@ def system_page(sys_name):
 
     st_tab_disabled = True if sdf is None else False
     fb_tab_disabled = True if bdf is None else False
+    
+    st_tab_text = "No station data available" if st_tab_disabled else ""
+    fb_tab_text = "No free bike data available" if fb_tab_disabled else ""
+    
+    active_tab = 'st-tab' if not st_tab_disabled else 'fb-tab'
+    
+    map_fig = make_station_map(api)
 
-    print(bdf)
-    print(api.query_free_bikes())
-    station_tab = dbc.Tab(label='Stations', id='st-tab', disabled=st_tab_disabled, children=[
+    station_tab = dbc.Tab(label='Stations', tab_id='st-tab', disabled=st_tab_disabled ,children=[
 
             dbc.Row([
                 #dbc.Col(width=3, children=html.Span(json.dumps(sys_info, indent=4))),
                 dbc.Col(width=12, children=[
-                    make_station_map(api)
+                    map_fig
                 ]),
 
                 dbc.Col(width=12, children=[
@@ -66,29 +71,24 @@ def system_page(sys_name):
             ])
         ])
 
-    free_bike_tab = dbc.Tab(label="Free bikes", id="fb-tab", disabled=fb_tab_disabled, children=[
-            bdf
+    free_bike_tab = dbc.Tab(label="Free bikes", tab_id="fb-tab", disabled=fb_tab_disabled, children=[
+            map_fig
         ])
 
-    tabs = dcc.Tabs(
+    tabs = dbc.Tabs(active_tab=active_tab, children=
         [
             station_tab,
             free_bike_tab
         ]
     )
+    
+    # Tooltips aren't working properly with DBC tabs for some reason.
+#     tooltips = [
+#         dbc.Tooltip(st_tab_text, target="st-tab"),
+#         dbc.Tooltip(fb_tab_text, target="fb-tab")
+#     ]
+    tooltips = []
 
-    tooltips = [
-        dbc.Tooltip("tooltip-text", target="st-tab"),
-        dbc.Tooltip("tooltip-text fb", target="fb-tab")
-    ]
-
-
-
-    #
-    # tooltips = [
-    #     dbc.Tooltip("Station data", target="st-tab"),
-    #     dbc.Tooltip("Floating bike data", target="fb-tab"),
-    #     ]
 
 
     layout = dbc.Row([
