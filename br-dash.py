@@ -62,7 +62,7 @@ sidebar = html.Div(
     style=SIDEBAR_STYLE,
 )
 
-content = html.Div(id="page-content", style=CONTENT_STYLE)
+content = dbc.Spinner(html.Div(id="page-content", style=CONTENT_STYLE), fullscreen=True)
 
 app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
 
@@ -83,9 +83,9 @@ def render_page_content(pathname):
     # If the user tries to reach a different page, return a 404 message
     return dbc.Jumbotron(
         [
-            html.H1("404: Not found", className="text-danger"),
+            html.H1("No Data", className="text-danger"),
             html.Hr(),
-            html.P(f"The pathname {pathname} was not recognised..."),
+            html.P(f"This system has no recent activity in the bikeraccoon database"),
         ]
     )
 
