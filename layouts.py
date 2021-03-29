@@ -4,6 +4,7 @@ import dash_html_components as html
 
 import json
 import datetime as dt
+import pytz
 import requests
 
 import bikeraccoon as br
@@ -29,10 +30,13 @@ def system_page(sys_name):
     api = br.LiveAPI(sys_name, echo=True)
 
     sys_info = api.info
+    
+    api.now = dt.datetime.utcnow().replace(minute=0, second=0, microsecond=0)
+    
+    api.now = pytz.timezone('UTC').localize(api.now).astimezone(pytz.timezone(sys_info['tz']))
+    sdf = api.get_system_trips(t1=api.now-dt.timedelta(hours=24),t2=api.now,freq='d')
 
-    sdf = api.get_system_trips(t1=dt.datetime.now()-dt.timedelta(hours=24),t2=dt.datetime.now(),freq='d')
-
-    bdf = api.get_free_bike_trips(t1=dt.datetime.now()-dt.timedelta(hours=24),t2=dt.datetime.now(),freq='d')
+    bdf = api.get_free_bike_trips(t1=api.now-dt.timedelta(hours=24),t2=api.now,freq='d')
 
 
     st_tab_disabled = True if sdf is None else False
@@ -108,7 +112,7 @@ def system_page(sys_name):
 
 def make_daily_graph(api):
 
-    t1 = dt.datetime.now()
+    t1 = api.now.replace(minute=0, second=0, microsecond=0)
     t2 = t1 - dt.timedelta(days=31)
 
     df = api.get_system_trips(t1,t2,freq='d').reset_index()
@@ -120,7 +124,7 @@ def make_daily_graph(api):
 
 def make_hourly_graph(api):
 
-    t1 = dt.datetime.now()
+    t1 = api.now.replace(minute=0, second=0, microsecond=0)
     t2 = t1 - dt.timedelta(days=7)
 
     df = api.get_system_trips(t1,t2,freq='h').reset_index()
@@ -199,7 +203,7 @@ def make_top_stations(api):
 
     print("Start make top station", dt.datetime.now())
 
-    t1 = dt.datetime.now()
+    t1 = api.now.replace(minute=0, second=0, microsecond=0)
     t2 = t1 - dt.timedelta(hours=24)
     thdf = api.get_station_trips(t1,t2,freq='h',station='all')
 
