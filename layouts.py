@@ -8,6 +8,7 @@ import pytz
 import requests
 
 import bikeraccoon as br
+import pandas as pd
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -22,8 +23,63 @@ margin=go.layout.Margin(
     pad=0)
 
 
+def get_city_coords(city,country):
+    r = requests.get(f"https://nominatim.openstreetmap.org/search?city={city}&country={country}&format=json")
+    r = r.json()[0]
+    lat = float(r['lat'])
+    lon = float(r['lon'])
+    
+    return lat,lon
+
+def make_home_page():
+    
+    #cdf = br.get_systems()
+    #cdf['coords'] = cdf.apply(lambda x: get_city_coords(x['city'],x['country']), axis=1)
+    
+    
+    sdf = pd.concat([br.LiveAPI(sys_name).get_stations() for sys_name in br.get_systems()['name']])
+    
+    maplayout = go.Layout(mapbox_style="light",
+                      mapbox=go.layout.Mapbox(
+                        accesstoken=MAPBOX_TOKEN,
+                        bearing=0,
+                        center=go.layout.mapbox.Center(
+                        lat=49,
+                        lon=-100,
+                        ),
+                        zoom=3
+                        ),
+                      paper_bgcolor='rgba(0,0,0,0)',
+                      plot_bgcolor='rgba(0,0,0,0)',
+                      margin=margin,
+                      showlegend = False,
+                     )
 
 
+    mapdata = go.Scattermapbox(#lat=cdf['coords'].apply(lambda x: x[0]),
+                               #lon=cdf['coords'].apply(lambda x: x[1]),
+                               lat=sdf['lat'],
+                               lon=sdf['lon'],
+                               #text=sdf['city'],
+                               hoverinfo='text',
+                               marker={'color':'#0f0f0f',
+                                        'size':6,
+                            #            'symbol':'bicycle'
+                            #           'size':trips_df['trips'],
+                            #           'sizemode':'area',
+                            #           'sizeref':2.*max(trips_df['trips'])/(40.**2),
+                            #           'sizemin':4
+                                })
+
+                              
+    fig = go.Figure(data=mapdata,layout=maplayout)
+    
+                              
+    return dcc.Graph(
+        id='cities-graph',
+        figure=fig
+        )
+    
 
 def system_page(sys_name):
 
@@ -49,35 +105,56 @@ def system_page(sys_name):
     
     map_fig = make_station_map(api)
 
+    
     station_tab = dbc.Tab(label='Stations', tab_id='st-tab', disabled=st_tab_disabled ,children=[
 
             dbc.Row([
                 #dbc.Col(width=3, children=html.Span(json.dumps(sys_info, indent=4))),
-                dbc.Col(width=12, children=[
-                    map_fig
-                ]),
 
-                dbc.Col(width=12, children=[
+
+                dbc.Col(width=8, children=[
                     dbc.Row([
                         dbc.Col(width=12, children=[
-                            make_daily_graph(api)
+                            make_hourly_graph(api)
                             ]),
                         dbc.Col(width=12, children=[
-                            make_hourly_graph(api)
+                            make_daily_graph(api)
                             ]),
                     ]),
                 ]),
 
 
                 dbc.Col(width=4, children=[
+                    html.H3("Most active stations"),
                     make_top_stations(api)
                 ])
             ])
-        ])
+        ] if not st_tab_disabled else [])
 
     free_bike_tab = dbc.Tab(label="Free bikes", tab_id="fb-tab", disabled=fb_tab_disabled, children=[
-            map_fig
-        ])
+        dbc.Row([
+                #dbc.Col(width=3, children=html.Span(json.dumps(sys_info, indent=4))),
+
+
+                dbc.Col(width=8, children=[
+                    dbc.Row([
+                        dbc.Col(width=12, children=[
+                            make_hourly_graph(api,kind='free_bikes')
+                            ]),
+                        dbc.Col(width=12, children=[
+                            make_daily_graph(api,kind='free_bikes')
+                            ]),
+                    ]),
+                ]),
+
+
+                dbc.Col(width=4, children=[
+                    html.H3("Most active stations"),
+                    make_top_stations(api)
+                ])
+            ])
+            
+        ]if not fb_tab_disabled else []  )
 
     tabs = dbc.Tabs(active_tab=active_tab, children=
         [
@@ -100,8 +177,9 @@ def system_page(sys_name):
             html.H1(f"{sys_info['brand']}"),
             html.H3(f"{sys_info['city']}, {sys_info['country']}"),
             html.Hr(),
-            ]),
+            ], width=12),
 
+        dbc.Col(map_fig, width=12),
         dbc.Col([tabs] + tooltips, width=12)
 
 
@@ -110,29 +188,51 @@ def system_page(sys_name):
     return layout
 
 
-def make_daily_graph(api):
+TEMPLATE='plotly_white'
+
+def make_daily_graph(api,kind='station'):
 
     t1 = api.now.replace(minute=0, second=0, microsecond=0)
     t2 = t1 - dt.timedelta(days=31)
 
     df = api.get_system_trips(t1,t2,freq='d').reset_index()
-    fig  = px.bar(df.reset_index(), x='datetime', y='station trips')
+    if kind=='station': 
+        y='station trips'
+    elif kind=='free_bikes':
+        y='free bike trips'
+    fig  = px.bar(df.reset_index(), x='datetime', y=y, height=300, template=TEMPLATE)
+    fig.update_layout(
+        title="Daily Trips",
+        xaxis_title="",
+        yaxis_title="trips",
+    )
     return dcc.Graph(
         id='daily-graph',
         figure=fig
     )
 
-def make_hourly_graph(api):
+def make_hourly_graph(api,kind='station'):
 
     t1 = api.now.replace(minute=0, second=0, microsecond=0)
     t2 = t1 - dt.timedelta(days=7)
-
     df = api.get_system_trips(t1,t2,freq='h').reset_index()
-    fig  = px.bar(df.reset_index(), x='datetime', y='station trips')
+    if kind=='station':
+        y='station trips'
+    elif kind=='free_bikes':
+        y='free bike trips'
+    fig  = px.bar(df.reset_index(), x='datetime', y=y,height=300,template=TEMPLATE)
+    fig.update_layout(
+        title="Hourly Trips",
+        xaxis_title="",
+        yaxis_title="trips",
+    )
     return dcc.Graph(
         id='hourly-graph',
         figure=fig
     )
+
+
+    
 
 
 def make_station_map(api):
@@ -203,12 +303,14 @@ def make_top_stations(api):
 
     print("Start make top station", dt.datetime.now())
 
+    n_stations = 10
+    
     t1 = api.now.replace(minute=0, second=0, microsecond=0)
     t2 = t1 - dt.timedelta(hours=24)
     thdf = api.get_station_trips(t1,t2,freq='h',station='all')
 
 
-    top_stations = list(thdf.groupby('station').sum().sort_values('trips',ascending=False).index[:5])
+    top_stations = list(thdf.groupby('station').sum().sort_values('trips',ascending=False).index[:n_stations])
 
 
     thdf = thdf[thdf['station'].isin(top_stations)].pivot(values='trips',columns='station')

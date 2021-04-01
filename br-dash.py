@@ -70,7 +70,7 @@ app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
     if pathname == "/":
-        return html.P("This is the content of the home page!")
+        return make_home_page()
 
     try:
         sys_name = pathname.strip('/')
