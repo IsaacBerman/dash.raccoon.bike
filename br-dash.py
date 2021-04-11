@@ -16,12 +16,16 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
 
+import base64
+
 import bikeraccoon as br
 
 from layouts import *
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 
+
+MAIN_COLOUR='#3286AD'
 # the style arguments for the sidebar. We use position:fixed and a fixed width
 SIDEBAR_STYLE = {
     "position": "fixed",
@@ -41,11 +45,14 @@ CONTENT_STYLE = {
     "padding": "2rem 1rem",
 }
 
+encoded_logo = base64.b64encode(open('static/logo.png', 'rb').read())
 
 
 sidebar = html.Div(
     [
-        html.H2("BikeRaccoon", className="display-5"),
+#         dcc.Link(href="/", children=html.H2("bikeraccoon", className="display-5", style={'font-family':'Courier New'})),
+        html.H2(dcc.Link(href="/", children="bikeraccoon",style={"color": "black", "text-decoration": "none"}), className="display-5", style={'font-family':'Courier New'}),
+        html.Img(src='data:image/png;base64,{}'.format(encoded_logo.decode()), style={'width': '100%'}),
         html.Hr(),
         html.P(
             "Real-time monitoring of bike share systems", className="lead"

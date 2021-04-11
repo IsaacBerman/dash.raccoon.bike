@@ -15,6 +15,9 @@ import plotly.graph_objects as go
 
 from credentials import MAPBOX_TOKEN
 
+MAIN_COLOUR='#3286AD'
+TEMPLATE='plotly_white'
+
 margin=go.layout.Margin(
     l=5,
     r=5,
@@ -36,7 +39,13 @@ def make_home_page():
     #cdf = br.get_systems()
     #cdf['coords'] = cdf.apply(lambda x: get_city_coords(x['city'],x['country']), axis=1)
     
-    
+    jumbo = dbc.Jumbotron(fluid=False, children=
+        [
+            html.H1("Live Bikeshare Tracking"),
+            html.Hr(),
+            html.P(f"Select a bikeshare system to view live trip activity"),
+        ]
+    )
     sdf = pd.concat([br.LiveAPI(sys_name).get_stations() for sys_name in br.get_systems()['name']])
     
     maplayout = go.Layout(mapbox_style="light",
@@ -62,7 +71,7 @@ def make_home_page():
                                lon=sdf['lon'],
                                #text=sdf['city'],
                                hoverinfo='text',
-                               marker={'color':'#0f0f0f',
+                               marker={'color':MAIN_COLOUR,
                                         'size':6,
                             #            'symbol':'bicycle'
                             #           'size':trips_df['trips'],
@@ -74,11 +83,20 @@ def make_home_page():
                               
     fig = go.Figure(data=mapdata,layout=maplayout)
     
-                              
-    return dcc.Graph(
-        id='cities-graph',
-        figure=fig
-        )
+    
+    res = dbc.Row([
+            dbc.Col(width=12, children=[
+                jumbo
+            ]),
+            dbc.Col(width=12, children=[
+                dcc.Graph(
+                    id='cities-graph',
+                    figure=fig
+                    )
+            ])
+    ])
+    
+    return res
     
 
 def system_page(sys_name):
@@ -125,7 +143,7 @@ def system_page(sys_name):
 
 
                 dbc.Col(width=4, children=[
-                    html.H3("Most active stations"),
+                    #html.H3("Most active stations"),
                     make_top_stations(api)
                 ])
             ])
@@ -147,14 +165,9 @@ def system_page(sys_name):
                     ]),
                 ]),
 
-
-                dbc.Col(width=4, children=[
-                    html.H3("Most active stations"),
-                    make_top_stations(api)
-                ])
             ])
             
-        ]if not fb_tab_disabled else []  )
+        ] if not fb_tab_disabled else []  )
 
     tabs = dbc.Tabs(active_tab=active_tab, children=
         [
@@ -175,7 +188,7 @@ def system_page(sys_name):
     layout = dbc.Row([
         dbc.Col([
             html.H1(f"{sys_info['brand']}"),
-            html.H3(f"{sys_info['city']}, {sys_info['country']}"),
+            html.H3(f"{sys_info['city']}, {sys_info['country']}", style={'color':'#696969'}),
             html.Hr(),
             ], width=12),
 
@@ -188,14 +201,16 @@ def system_page(sys_name):
     return layout
 
 
-TEMPLATE='plotly_white'
 
 def make_daily_graph(api,kind='station'):
 
     t1 = api.now.replace(minute=0, second=0, microsecond=0)
     t2 = t1 - dt.timedelta(days=31)
 
+
+    
     df = api.get_system_trips(t1,t2,freq='d').reset_index()
+
     if kind=='station': 
         y='station trips'
     elif kind=='free_bikes':
@@ -206,6 +221,12 @@ def make_daily_graph(api,kind='station'):
         xaxis_title="",
         yaxis_title="trips",
     )
+    
+    fig.update_traces(customdata=[x.strftime('%a %B %-d %Y %X') for x in df['datetime']],hovertemplate='%{y} trips<br>' + 
+                                   '<b>%{customdata}</b><extra></extra>')
+    fig.update_traces(marker_color=MAIN_COLOUR, marker_line_color=MAIN_COLOUR,
+                  marker_line_width=1.5, opacity=0.6, width=1000 * 3600 * 20 )
+    
     return dcc.Graph(
         id='daily-graph',
         figure=fig
@@ -220,12 +241,18 @@ def make_hourly_graph(api,kind='station'):
         y='station trips'
     elif kind=='free_bikes':
         y='free bike trips'
-    fig  = px.bar(df.reset_index(), x='datetime', y=y,height=300,template=TEMPLATE)
+    fig  = px.bar(df.reset_index(), x='datetime', y=y,
+                  height=300,template=TEMPLATE)
     fig.update_layout(
         title="Hourly Trips",
         xaxis_title="",
         yaxis_title="trips",
     )
+
+    fig.update_traces(customdata=[x.strftime('%a %B %-d %Y %X') for x in df['datetime']],hovertemplate='%{y} trips<br>' + 
+                                    '<b>%{customdata}</b><extra></extra>')
+    fig.update_traces(marker_color=MAIN_COLOUR, marker_line_color=MAIN_COLOUR,
+                  marker_line_width=1.5, opacity=0.6)
     return dcc.Graph(
         id='hourly-graph',
         figure=fig
@@ -239,7 +266,11 @@ def make_station_map(api):
 
     sdf = api.get_stations()
     bdf = api.query_free_bikes()
+    
+    tdf = api.get_station_trips(t1=api.now,freq='d',station='all')
 
+    sdf = pd.merge(sdf,tdf,on='station_id')
+        
     # Get city location from OSM API
     city = api.info['city']
     country = api.info['country']
@@ -265,19 +296,24 @@ def make_station_map(api):
 
 
     mapdata = [go.Scattermapbox()]
-
+    
     if sdf is not None:
         stationdata = go.Scattermapbox(lat=sdf['lat'],
                                    lon=sdf['lon'],
                                    text=sdf['name'],
+                                   customdata=sdf['trips'],
                                    hoverinfo='text',
-                                   marker={'color':'#0f0f0f',
-                                            'size':6,
-                                #            'symbol':'bicycle'
-                                #           'size':trips_df['trips'],
-                                #           'sizemode':'area',
-                                #           'sizeref':2.*max(trips_df['trips'])/(40.**2),
-                                #           'sizemin':4
+                                   hovertemplate =
+                                    '<i>Trips today</i>: %{customdata}<br>' + 
+                                    '<b>%{text}</b><extra></extra>',
+                                   #name='Trips Today',
+                                   marker={'color':MAIN_COLOUR,
+                                          'sizemin':1,
+                                          'size':[0.1 if x==0 else x for x in sdf['trips']],
+                                          'sizemode':'area',
+                                          'sizeref':2.*max(sdf['trips'])/(40.**2),
+                                          
+                                          
                                     })
         mapdata.append(stationdata)
 
@@ -286,12 +322,19 @@ def make_station_map(api):
                                    lon=bdf['lon'],
                                    text=bdf['bike_id'],
                                    hoverinfo='text',
-                                   marker={'color':'#0f0f0f',
+                                   name='Free Bikes',
+                                   marker={'color':MAIN_COLOUR,
                                             'size':6,
                                             'symbol':'bicycle'
                                             })
         mapdata.append(bikedata)
+        
+        
+    
     fig = go.Figure(data=mapdata,layout=maplayout)
+    
+
+
     return dcc.Graph(
         id='station-graph',
         figure=fig
@@ -315,7 +358,7 @@ def make_top_stations(api):
 
     thdf = thdf[thdf['station'].isin(top_stations)].pivot(values='trips',columns='station')
 
-    fig = px.line(thdf[top_stations],facet_row="station",facet_row_spacing=0.01)
+    fig = px.line(thdf[top_stations],facet_row="station",facet_row_spacing=0.05)
 
     # hide and lock down axes
     fig.update_xaxes(visible=False, fixedrange=True)
@@ -340,9 +383,13 @@ def make_top_stations(api):
     fig.update_layout(
         showlegend=False,
         plot_bgcolor="white",
-        margin=dict(t=10,l=10,b=10,r=10)
+        margin=dict(t=40,l=10,b=10,r=10),
+        title="Most active stations (last 24 hours)"
     )
-
+    
+    #fig.update_traces(customdata=df.index.strftime('%a %B %-d %Y %X'),hovertemplate='%{y} trips<br>' + 
+    #                                '<b>%{customdata}</b><extra></extra>')
+    
     print("End make top station", dt.datetime.now())
 
     return dcc.Graph(
