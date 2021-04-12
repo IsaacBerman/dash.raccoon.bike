@@ -64,7 +64,7 @@ sidebar = html.Div(
         ),
         dbc.Nav(
             [
-                dbc.NavLink(f"{system['brand']} ({system['city']})", href=f"/{system['name']}") for system in br.get_systems().to_dict('records')
+                dbc.NavLink(f"{system['brand']} ({system['city']})", href=f"/{system['name']}", style={'color':BLUE}) for system in br.get_systems().to_dict('records')
 
             ],
             vertical=True,

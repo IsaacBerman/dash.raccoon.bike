@@ -15,7 +15,16 @@ import plotly.graph_objects as go
 
 from credentials import MAPBOX_TOKEN
 
-MAIN_COLOUR='#3286AD'
+BLUE='#3286AD'
+PURPLE='#190933'
+NAVY='#001B2E'
+PEACH='#FF715B'
+GREEN='#7CA982'
+ORANGE='#F49D37'
+RED='#6F1A07'
+
+colors = [BLUE, PURPLE, NAVY, PEACH, GREEN, ORANGE, RED]
+
 TEMPLATE='plotly_white'
 
 margin=go.layout.Margin(
@@ -71,7 +80,7 @@ def make_home_page():
                                lon=sdf['lon'],
                                #text=sdf['city'],
                                hoverinfo='text',
-                               marker={'color':MAIN_COLOUR,
+                               marker={'color':PURPLE,
                                         'size':6,
                             #            'symbol':'bicycle'
                             #           'size':trips_df['trips'],
@@ -187,7 +196,7 @@ def system_page(sys_name):
 
     layout = dbc.Row([
         dbc.Col([
-            html.H1(f"{sys_info['brand']}"),
+            html.H1(f"{sys_info['brand']}", style={'color':BLUE}),
             html.H3(f"{sys_info['city']}, {sys_info['country']}", style={'color':'#696969'}),
             html.Hr(),
             ], width=12),
@@ -224,8 +233,8 @@ def make_daily_graph(api,kind='station'):
     
     fig.update_traces(customdata=[x.strftime('%a %B %-d %Y %X') for x in df['datetime']],hovertemplate='%{y} trips<br>' + 
                                    '<b>%{customdata}</b><extra></extra>')
-    fig.update_traces(marker_color=MAIN_COLOUR, marker_line_color=MAIN_COLOUR,
-                  marker_line_width=1.5, opacity=0.6, width=1000 * 3600 * 20 )
+    fig.update_traces(marker_color=PURPLE, marker_line_color=PURPLE,
+                  marker_line_width=1.5, opacity=1, width=1000 * 3600 * 20 )
     
     return dcc.Graph(
         id='daily-graph',
@@ -251,8 +260,8 @@ def make_hourly_graph(api,kind='station'):
 
     fig.update_traces(customdata=[x.strftime('%a %B %-d %Y %X') for x in df['datetime']],hovertemplate='%{y} trips<br>' + 
                                     '<b>%{customdata}</b><extra></extra>')
-    fig.update_traces(marker_color=MAIN_COLOUR, marker_line_color=MAIN_COLOUR,
-                  marker_line_width=1.5, opacity=0.6)
+    fig.update_traces(marker_color=PEACH, marker_line_color=PEACH,
+                  marker_line_width=1.5, opacity=1)
     return dcc.Graph(
         id='hourly-graph',
         figure=fig
@@ -307,7 +316,7 @@ def make_station_map(api):
                                     '<i>Trips today</i>: %{customdata}<br>' + 
                                     '<b>%{text}</b><extra></extra>',
                                    #name='Trips Today',
-                                   marker={'color':MAIN_COLOUR,
+                                   marker={'color':GREEN,
                                           'sizemin':1,
                                           'size':[0.1 if x==0 else x for x in sdf['trips']],
                                           'sizemode':'area',
@@ -323,7 +332,7 @@ def make_station_map(api):
                                    text=bdf['bike_id'],
                                    hoverinfo='text',
                                    name='Free Bikes',
-                                   marker={'color':MAIN_COLOUR,
+                                   marker={'color':GREEN,
                                             'size':6,
                                             'symbol':'bicycle'
                                             })
@@ -358,7 +367,7 @@ def make_top_stations(api):
 
     thdf = thdf[thdf['station'].isin(top_stations)].pivot(values='trips',columns='station')
 
-    fig = px.line(thdf[top_stations],facet_row="station",facet_row_spacing=0.05)
+    fig = px.line(thdf[top_stations],facet_row="station",facet_row_spacing=0.05,color_discrete_sequence=colors)
 
     # hide and lock down axes
     fig.update_xaxes(visible=False, fixedrange=True)
