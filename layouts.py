@@ -130,7 +130,7 @@ def system_page(sys_name):
                 #dbc.Col(width=3, children=html.Span(json.dumps(sys_info, indent=4))),
 
 
-                dbc.Col(width=8, children=[
+                dbc.Col(width=12, md=8, children=[
                     dbc.Row([
                         dbc.Col(width=12, children=[
                             make_hourly_graph(api)
@@ -142,7 +142,7 @@ def system_page(sys_name):
                 ]),
 
 
-                dbc.Col(width=4, children=[
+                dbc.Col(width=12, md=4, children=[
                     #html.H3("Most active stations"),
                     make_top_stations(api)
                 ])

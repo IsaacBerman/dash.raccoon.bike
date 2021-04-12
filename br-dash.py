@@ -22,7 +22,12 @@ import bikeraccoon as br
 
 from layouts import *
 
-app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(
+        external_stylesheets=[dbc.themes.BOOTSTRAP],
+        meta_tags=[
+            {"name": "viewport", "content": "width=device-width, initial-scale=1"}
+        ],
+    )
 
 
 MAIN_COLOUR='#3286AD'
@@ -66,10 +71,11 @@ sidebar = html.Div(
             pills=True,
         ),
     ],
-    style=SIDEBAR_STYLE,
+#    style=SIDEBAR_STYLE,
+    id='sidebar'
 )
 
-content = dbc.Spinner(html.Div(id="page-content", style=CONTENT_STYLE), fullscreen=True)
+content = dbc.Spinner(html.Div(id="page-content"), fullscreen=True)
 
 app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
 
