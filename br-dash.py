@@ -22,9 +22,23 @@ import bikeraccoon as br
 
 from layouts import *
 
+base_url = 'https://dash.mikejarrett.ca'
+
+#encoded_logo = base64.b64encode(open('static/logo.png', 'rb').read())
 app = dash.Dash(
         external_stylesheets=[dbc.themes.BOOTSTRAP],
         meta_tags=[
+            {'name':"twitter:card", 'content':"summary_large_image"},
+             {'name':"twitter:site", 'content':"@VanBikeShareBot"},
+             {'name':"twitter:creator", 'content':"@mikejarrett_"},
+             {'name':"twitter:title", 'content':"raccoon.bike"},
+             {'name':"twitter:description", 'content':"Live tracking of public bikeshare systems"},
+             {'name':"twitter:image" , 'content':f'{base_url}/assets/logo.png'},
+             {'property':"og:url", 'content':"https://dash.raccoon.bike"},
+             {'property':"og:title", 'content':"raccoon.bike"},
+             {'property':"og:description", 'content':"Live tracking of public bikeshare systems"},
+             {'property':"og:image" , 'content':f'{base_url}/assets/logo.png'},
+             {'property':"og:type" , 'content':"website"},
             {"name": "viewport", "content": "width=device-width, initial-scale=1"}
         ],
     )
@@ -50,21 +64,21 @@ CONTENT_STYLE = {
     "padding": "2rem 1rem",
 }
 
-encoded_logo = base64.b64encode(open('static/logo.png', 'rb').read())
 
 
 sidebar = html.Div(
     [
 #         dcc.Link(href="/", children=html.H2("bikeraccoon", className="display-5", style={'font-family':'Courier New'})),
-        html.H2(dcc.Link(href="/", children="bikeraccoon",style={"color": "black", "text-decoration": "none"}), className="display-5", style={'font-family':'Courier New'}),
-        html.Img(src='data:image/png;base64,{}'.format(encoded_logo.decode()), style={'width': '100%'}),
+        html.H2(dcc.Link(href="/", children="raccoon.bike",style={"color": "black", "text-decoration": "none"}), className="display-5", style={'font-family':'Courier New'}),
+        #html.Img(src='data:image/png;base64,{}'.format(encoded_logo.decode()), style={'width': '100%'}),
+        html.Img(src=app.get_asset_url('logo.png'), style={'width':'100%'}),
         html.Hr(),
         html.P(
             "Real-time monitoring of bike share systems", className="lead"
         ),
         dbc.Nav(
             [
-                dbc.NavLink(f"{system['brand']} ({system['city']})", href=f"/{system['name']}", style={'color':BLUE}) for system in br.get_systems().to_dict('records')
+                dbc.NavLink(f"{system['brand']} ({system['city']})", href=f"/live/{system['name']}", style={'color':BLUE}) for system in br.get_systems().to_dict('records')
 
             ],
             vertical=True,
@@ -86,9 +100,10 @@ def render_page_content(pathname):
         return make_home_page()
 
     try:
-        sys_name = pathname.strip('/')
+        sys_name = pathname.strip('/').split('/')
         print(sys_name)
-        return system_page(sys_name)
+        print(sys_name[1])
+        return system_page(sys_name[1])
     except Exception as e:
         print(e)
         pass
