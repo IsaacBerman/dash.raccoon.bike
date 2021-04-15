@@ -6,6 +6,7 @@ import json
 import datetime as dt
 import pytz
 import requests
+import os
 
 import bikeraccoon as br
 import pandas as pd
@@ -13,7 +14,8 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from credentials import MAPBOX_TOKEN
+MAPBOX_TOKEN = os.environ['MAPBOX_TOKEN']
+
 
 BLUE='#3286AD'
 PURPLE='#190933'
