@@ -1,4 +1,4 @@
-git+https://git@github.com:mjarrett/bikeraccoon@4c8ef294c987b307f06ef7edb0578fb65afdc60b#egg=bikeraccoon
+git+git://github.com/mjarrett/bikeraccoon.git
 Brotli==1.0.9
 certifi==2020.12.5
 chardet==4.0.0
