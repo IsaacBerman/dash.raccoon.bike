@@ -43,19 +43,22 @@ def get_city_coords(city,country):
     
     return lat,lon
 
-def make_home_page():
+def make_live_home_page():
     
-    #cdf = br.get_systems()
-    #cdf['coords'] = cdf.apply(lambda x: get_city_coords(x['city'],x['country']), axis=1)
+    def linkagg(x):
+        if x.empty:
+            return None
+        return '<br>'.join(x)
     
-    jumbo = dbc.Jumbotron(fluid=False, children=
-        [
-            html.H1("Live Bikeshare Tracking"),
-            html.Hr(),
-            html.P(f"Select a bikeshare system to view live trip activity"),
-        ]
-    )
-    sdf = pd.concat([br.LiveAPI(sys_name).get_stations() for sys_name in br.get_systems()['name']])
+    cdf = br.get_systems()
+    cdf['coords'] = cdf.apply(lambda x: get_city_coords(x['city'],x['country']), axis=1)
+    cdf['link'] = cdf.apply(lambda x: f"<a target='_self' style='color:white;' href='/live/{x['name']}'>{x['brand']}</a>",axis=1)
+    
+    cdf = cdf.groupby('city').agg({'link':linkagg, 'coords':'first'})
+    
+                                              
+
+#     sdf = pd.concat([br.LiveAPI(sys_name).get_stations() for sys_name in br.get_systems()['name']])
     
     maplayout = go.Layout(mapbox_style="light",
                       mapbox=go.layout.Mapbox(
@@ -74,15 +77,16 @@ def make_home_page():
                      )
 
 
-    mapdata = go.Scattermapbox(#lat=cdf['coords'].apply(lambda x: x[0]),
-                               #lon=cdf['coords'].apply(lambda x: x[1]),
-                               lat=sdf['lat'],
-                               lon=sdf['lon'],
-                               #text=sdf['city'],
+    mapdata = go.Scattermapbox(lat=cdf['coords'].apply(lambda x: x[0]),
+                               lon=cdf['coords'].apply(lambda x: x[1]),
+#                                lat=sdf['lat'],
+#                                lon=sdf['lon'],
+                               text=cdf['link'],
                                hoverinfo='text',
-                               marker={'color':PURPLE,
-                                        'size':6,
-                            #            'symbol':'bicycle'
+                              
+                               marker={'color':BLUE,
+                                        'size':20,
+                            #           'symbol':'bicycle'
                             #           'size':trips_df['trips'],
                             #           'sizemode':'area',
                             #           'sizeref':2.*max(trips_df['trips'])/(40.**2),
@@ -91,21 +95,25 @@ def make_home_page():
 
                               
     fig = go.Figure(data=mapdata,layout=maplayout)
+
     
-    
-    res = dbc.Row([
-            dbc.Col(width=12, children=[
-                jumbo
-            ]),
+    jumbo = dbc.Jumbotron(fluid=False, children=
+        [
+            html.H1("Live Bikeshare Tracking"),
+            html.Hr(),
+            html.P(f"Select a bikeshare system to view live trip activity"),
             dbc.Col(width=12, children=[
                 dcc.Graph(
                     id='cities-graph',
                     figure=fig
                     )
             ])
-    ])
+        ]
+    )
     
-    return res
+    
+    
+    return jumbo
     
 
 def system_page(sys_name):
