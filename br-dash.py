@@ -92,7 +92,8 @@ sidebar = html.Div(
 content = dbc.Spinner(html.Div(id="page-content"), fullscreen=True)
 
 app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
-
+app.title = 'raccoon.bike'
+server = app.server
 
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
