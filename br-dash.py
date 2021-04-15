@@ -25,7 +25,7 @@ from layouts import *
 base_url = 'https://dash.mikejarrett.ca'
 
 #encoded_logo = base64.b64encode(open('static/logo.png', 'rb').read())
-app = dash.Dash(
+app = dash.Dash(__name__,
         external_stylesheets=[dbc.themes.BOOTSTRAP],
         meta_tags=[
             {'name':"twitter:card", 'content':"summary_large_image"},
