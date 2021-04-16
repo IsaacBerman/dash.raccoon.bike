@@ -50,7 +50,7 @@ def make_live_home_page():
     def linkagg(x):
         if x.empty:
             return None
-        return '<br>'.join(x)
+        return '<br>----<br>'.join(x)
     
     cdf = br.get_systems()
     cdf['coords'] = cdf.apply(lambda x: get_city_coords(x['city'],x['country']), axis=1)
@@ -241,7 +241,7 @@ def make_daily_graph(api,kind='station'):
         yaxis_title="trips",
     )
     
-    fig.update_traces(customdata=[x.strftime('%a %B %-d %Y %X') for x in df['datetime']],hovertemplate='%{y} trips<br>' + 
+    fig.update_traces(customdata=[x.strftime('%a %B %-d %Y') for x in df['datetime']],hovertemplate='%{y} trips<br>' + 
                                    '<b>%{customdata}</b><extra></extra>')
     fig.update_traces(marker_color=PURPLE, marker_line_color=PURPLE,
                   marker_line_width=1.5, opacity=1, width=1000 * 3600 * 20 )
@@ -316,7 +316,11 @@ def make_station_map(api):
 
     mapdata = [go.Scattermapbox()]
     
+
+    
     if sdf is not None:
+
+        
         stationdata = go.Scattermapbox(lat=sdf['lat'],
                                    lon=sdf['lon'],
                                    text=sdf['name'],
@@ -328,13 +332,17 @@ def make_station_map(api):
                                    #name='Trips Today',
                                    marker={'color':GREEN,
                                           'sizemin':1,
-                                          'size':[0.1 if x==0 else x for x in sdf['trips']],
+                                          'size':[1 if x==0 else x for x in sdf['trips']],
                                           'sizemode':'area',
                                           'sizeref':2.*max(sdf['trips'])/(40.**2),
                                           
                                           
                                     })
         mapdata.append(stationdata)
+        
+
+        
+        
 
     if bdf is not None:
         bikedata = go.Scattermapbox(lat=bdf['lat'],
@@ -383,18 +391,7 @@ def make_top_stations(api):
     fig.update_xaxes(visible=False, fixedrange=True)
     fig.update_yaxes(visible=False)#, fixedrange=True)
 
-    # remove facet/subplot labels
-    # annotations = []
-    #
-    # for i in range(5):
-    #     annotations.append(dict(xref='paper', x=0.1, y=i*2000 ,
-    #                                   xanchor='right', yanchor='middle',
-    #                                   text='Test 99%',
-    #                                   font=dict(family='Arial',
-    #                                             size=16),
-    #                                   showarrow=False))
-    # fig.update_layout(annotations=annotations, overwrite=True)
-    #fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+
     fig.for_each_annotation(lambda a: a.update(textangle=0,x=0.05,y=a.y+0.05,
                                                 text=a.text.split("=")[-1],
                                                 ))
@@ -406,12 +403,15 @@ def make_top_stations(api):
         title="Most active stations (last 24 hours)"
     )
     
-    #fig.update_traces(customdata=df.index.strftime('%a %B %-d %Y %X'),hovertemplate='%{y} trips<br>' + 
-    #                                '<b>%{customdata}</b><extra></extra>')
-    
+
+    fig.update_traces(customdata=[x.strftime('%a %B %-d %Y') for x in thdf.index],hovertemplate='%{y} trips<br>' + 
+                                    '<b>%{customdata}</b><extra></extra>')
     print("End make top station", dt.datetime.now())
 
     return dcc.Graph(
         id='stations-graph',
-        figure=fig
+        figure=fig,
+        config={
+        'displayModeBar': False
+        }
         )
