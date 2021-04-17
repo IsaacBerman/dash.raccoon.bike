@@ -15,6 +15,8 @@ import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
+from whitenoise import WhiteNoise
+
 
 import base64
 
@@ -44,6 +46,13 @@ app = dash.Dash(__name__,
     )
 
 
+app.title = 'raccoon.bike'
+server = app.server
+
+# This is to serve files from /static/ as if it's root
+server.wsgi_app = WhiteNoise(server.wsgi_app, root='static/')
+
+
 MAIN_COLOUR='#3286AD'
 # the style arguments for the sidebar. We use position:fixed and a fixed width
 SIDEBAR_STYLE = {
@@ -71,7 +80,8 @@ sidebar = html.Div(
 #         dcc.Link(href="/", children=html.H2("bikeraccoon", className="display-5", style={'font-family':'Courier New'})),
         html.H2(dcc.Link(href="/", children="raccoon.bike",style={"color": "black", "text-decoration": "none"}), className="display-5", style={'font-family':'Courier New'}),
         #html.Img(src='data:image/png;base64,{}'.format(encoded_logo.decode()), style={'width': '100%'}),
-        html.Img(src=app.get_asset_url('logo.png'), style={'width':'100%'}),
+        #html.Img(src=app.get_asset_url('logo.png'), style={'width':'100%'}),
+        html.Img(src='/logo.png', style={'width':'100%'}),
         html.Hr(),
         html.P(
             "Real-time monitoring of bike share systems", className="lead"
@@ -92,8 +102,6 @@ sidebar = html.Div(
 content = dbc.Spinner(html.Div(id="page-content"), fullscreen=True)
 
 app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
-app.title = 'raccoon.bike'
-server = app.server
 
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
