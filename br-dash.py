@@ -94,20 +94,36 @@ sidebar = html.Div(
             vertical=True,
             pills=True,
         ),
+        
+        html.Hr(),
+        dcc.Link(href='/about/', children='About',style={"color": BLUE}), 
+        
+        
     ],
+    
+    
 #    style=SIDEBAR_STYLE,
     id='sidebar'
 )
 
 content = dbc.Spinner(html.Div(id="page-content"), fullscreen=True)
 
-app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
+footer = html.Div([
+                html.Hr(),
+                html.Span("© Mike Jarrett 2021", style={'float': 'right','margin':10})
+                ])
+
+app.layout = html.Div([dcc.Location(id="url"), sidebar, content, footer])
 
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
     if pathname in ['/','/live/']:
         return make_live_home_page()
 
+    if pathname in ['/about','/about/']:
+        return html.Div(about_text)
+    
+    
     try:
         sys_name = pathname.strip('/').split('/')
         print(sys_name)
