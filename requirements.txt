@@ -1,4 +1,4 @@
-git+git://github.com/mjarrett/bikeraccoon.git@0.2
+git+git://github.com/mjarrett/bikeraccoon.git@b0ca475
 Brotli==1.0.9
 certifi==2020.12.5
 chardet==4.0.0
