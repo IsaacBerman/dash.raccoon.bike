@@ -14,4 +14,3 @@ To receive daily bikeshare updates in your twitter feed, please follow:
 * [https://twitter.com/vanbikesharebot](https://twitter.com/vanbikesharebot)
 * [https://twitter.com/tobikesharebot](https://twitter.com/tobikesharebot)
 * [https://twitter.com/mtlbikesharebot](https://twitter.com/mtlbikesharebot)
-'''
