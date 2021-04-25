@@ -141,6 +141,8 @@ def system_page(sys_name):
     
     map_fig = make_station_map(api)
 
+    top_row = make_top_row(api)
+    
     
     station_tab = dbc.Tab(label='Stations', tab_id='st-tab', disabled=st_tab_disabled ,children=[
 
@@ -210,6 +212,7 @@ def system_page(sys_name):
             html.Hr(),
             ], width=12),
 
+        dbc.Col(top_row, width=12),
         dbc.Col(map_fig, width=12),
         dbc.Col([tabs] + tooltips, width=12)
 
@@ -218,6 +221,76 @@ def system_page(sys_name):
 
     return layout
 
+
+def make_top_row(api):
+    
+    bikes = api.get_station_trips(dt.datetime.now().replace(hour=4),freq='h')['num_bikes_available'].sum()
+    
+    try:
+        bikes = bikes + api.get_free_bike_trips(dt.datetime.now().replace(hour=4), freq='h')['num_bikes_available'].sum()
+    except TypeError:
+        pass
+    
+    card_content_bikes = [
+    #dbc.CardHeader("Card header"),
+    dbc.CardBody(
+        [
+            html.H5("Total bikes", className="card-title"),
+            html.H1(
+                f"{bikes:,}",
+                className="card-text display-3",
+            ),
+        ]
+    ),
+]
+    
+    sdf = api.get_stations()
+    stations = len(sdf[sdf['active']])
+    card_content_stations = [
+    #dbc.CardHeader("Active Stations"),
+    dbc.CardBody(
+        [
+            html.H5("Active Stations", className="card-title"),
+            html.H2(
+                f"{stations:,}",
+                className="card-text display-3",
+            ),
+        ]
+    ),
+]
+        
+    # This combines station and free bike trips
+    trips = api.get_system_trips(dt.datetime.now(),freq='y').sum(1)[0]  
+    card_content_trips = [
+    #dbc.CardHeader("Card header"),
+    dbc.CardBody(
+        [
+            html.H5("Trips this year", className="card-title"),
+            html.H3(
+                f"{trips:,}",
+                className="card-text display-3",
+            ),
+        ]
+    ),
+]
+    
+    
+    cards = html.Div(
+    [
+        dbc.Row(
+            [
+                dbc.Col(dbc.Card(card_content_bikes, color=RED, inverse=True)),
+                dbc.Col(
+                    dbc.Card(card_content_stations, color=GREEN, inverse=True)
+                ),
+                dbc.Col(dbc.Card(card_content_trips, color=PURPLE, inverse=True)),
+            ],
+            className="mb-4",
+        ),
+
+    ]
+)
+    return cards
 
 
 def make_daily_graph(api,kind='station'):
@@ -376,6 +449,8 @@ def make_top_stations(api):
     
     t1 = api.now.replace(minute=0, second=0, microsecond=0)
     t2 = t1 - dt.timedelta(hours=24)
+    
+    
     thdf = api.get_station_trips(t1,t2,freq='h',station='all')
 
 
