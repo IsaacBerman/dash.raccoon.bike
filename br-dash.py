@@ -14,7 +14,7 @@ import dash
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 from whitenoise import WhiteNoise
 
 
@@ -75,45 +75,15 @@ CONTENT_STYLE = {
 
 
 
-sidebar = html.Div(
-    [
-#         dcc.Link(href="/", children=html.H2("bikeraccoon", className="display-5", style={'font-family':'Courier New'})),
-        html.H2(dcc.Link(href="/", children="raccoon.bike",style={"color": "black", "text-decoration": "none"}), className="display-5", style={'font-family':'Courier New'}),
-        #html.Img(src='data:image/png;base64,{}'.format(encoded_logo.decode()), style={'width': '100%'}),
-        #html.Img(src=app.get_asset_url('logo.png'), style={'width':'100%'}),
-        html.Img(src='/logo.png', style={'width':'100%'}),
-        html.Hr(),
-        html.P(
-            "Real-time monitoring of bike share systems", className="lead"
-        ),
-        dbc.Nav(
-            [
-                dbc.NavLink(f"{system['brand']} ({system['city']})", href=f"/live/{system['name']}", style={'color':BLUE}) for system in br.get_systems().to_dict('records')
 
-            ],
-            vertical=True,
-            pills=True,
-        ),
-        
-        html.Hr(),
-        dcc.Link(href='/about/', children='About',style={"color": BLUE}), 
-        
-        
-    ],
-    
-    
-#    style=SIDEBAR_STYLE,
-    id='sidebar'
-)
-
-content = dbc.Spinner(html.Div(id="page-content"), fullscreen=True)
+content = html.Div(id="page-content")
 
 footer = html.Div([
                 html.Hr(),
                 html.Span("© Mike Jarrett 2021", style={'float': 'right','margin':10})
                 ])
 
-app.layout = html.Div([dcc.Location(id="url"), sidebar, content, footer])
+app.layout = html.Div([dcc.Location(id="url"), content, footer])
 
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
@@ -125,10 +95,8 @@ def render_page_content(pathname):
     
     
     try:
-        sys_name = pathname.strip('/').split('/')
-        print(sys_name)
-        print(sys_name[1])
-        return system_page(sys_name[1])
+        sys_name = pathname.strip('/').split('/')[1]
+        return system_page(sys_name)
     except Exception as e:
         print(e)
         pass
@@ -142,6 +110,55 @@ def render_page_content(pathname):
         ]
     )
 
+
+@app.callback(Output("top_row", "children"), [Input("page-content", "children")],  [State("url", "pathname")])
+def render_top_row(content,pathname):
+    sys_name = pathname.strip('/').split('/')[1]
+    
+    api = br.LiveAPI(sys_name, echo=True)
+
+    sys_info = api.info
+    
+    api.now = dt.datetime.utcnow().replace(minute=0, second=0, microsecond=0)
+    
+    api.now = pytz.timezone('UTC').localize(api.now).astimezone(pytz.timezone(sys_info['tz']))
+    
+    top_row = make_top_row(api)
+
+    return top_row
+   
+    
+@app.callback(Output("map_fig", "children"), [Input("page-content", "children")],  [State("url", "pathname")])
+def render_map_fig(content,pathname):
+    sys_name = pathname.strip('/').split('/')[1]
+    
+    api = br.LiveAPI(sys_name, echo=True)
+
+    sys_info = api.info
+    
+    api.now = dt.datetime.utcnow().replace(minute=0, second=0, microsecond=0)
+    
+    api.now = pytz.timezone('UTC').localize(api.now).astimezone(pytz.timezone(sys_info['tz']))
+    
+    map_fig = make_station_map(api)
+
+    return map_fig
+    
+@app.callback(Output("tabs", "children"), [Input("page-content", "children")],  [State("url", "pathname")])
+def render_tabs(content,pathname):
+    sys_name = pathname.strip('/').split('/')[1]
+    
+    api = br.LiveAPI(sys_name, echo=True)
+
+    sys_info = api.info
+    
+    api.now = dt.datetime.utcnow().replace(minute=0, second=0, microsecond=0)
+    
+    api.now = pytz.timezone('UTC').localize(api.now).astimezone(pytz.timezone(sys_info['tz']))
+    
+    tabs = make_tabs(api)
+
+    return tabs    
 
 if __name__ == "__main__":
     app.run_server(port=8050, host='0.0.0.0', debug=True)

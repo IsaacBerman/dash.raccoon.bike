@@ -44,6 +44,41 @@ def get_city_coords(city,country):
     
     return lat,lon
 
+
+sidebar = html.Div(
+        [
+    #         dcc.Link(href="/", children=html.H2("bikeraccoon", className="display-5", style={'font-family':'Courier New'})),
+            html.H2(dcc.Link(href="/", children="raccoon.bike",style={"color": "black", "text-decoration": "none"}), className="display-5", style={'font-family':'Courier New'}),
+            #html.Img(src='data:image/png;base64,{}'.format(encoded_logo.decode()), style={'width': '100%'}),
+            #html.Img(src=app.get_asset_url('logo.png'), style={'width':'100%'}),
+            html.Img(src='/logo.png', style={'width':'100%'}),
+            html.Hr(),
+            html.P(
+                "Real-time monitoring of bike share systems", className="lead"
+            ),
+            dbc.Nav(
+                [
+                    dbc.NavLink(f"{system['brand']} ({system['city']})", href=f"/live/{system['name']}", style={'color':BLUE}) for system in br.get_systems().to_dict('records')
+
+                ],
+                vertical=True,
+                pills=True,
+            ),
+
+            html.Hr(),
+            dcc.Link(href='/about/', children='About',style={"color": BLUE}), 
+
+
+        ],
+
+
+    #    style=SIDEBAR_STYLE,
+        id='sidebar'
+    )
+
+
+
+
 def make_live_home_page():
     
     def linkagg(x):
@@ -114,18 +149,10 @@ def make_live_home_page():
     
     
     
-    return jumbo
+    return html.Div([sidebar,jumbo])
     
-
-def system_page(sys_name):
-
-    api = br.LiveAPI(sys_name, echo=True)
-
-    sys_info = api.info
     
-    api.now = dt.datetime.utcnow().replace(minute=0, second=0, microsecond=0)
-    
-    api.now = pytz.timezone('UTC').localize(api.now).astimezone(pytz.timezone(sys_info['tz']))
+def make_tabs(api):
     sdf = api.get_system_trips(t1=api.now-dt.timedelta(hours=24),t2=api.now,freq='d')
 
     bdf = api.get_free_bike_trips(t1=api.now-dt.timedelta(hours=24),t2=api.now,freq='d')
@@ -139,9 +166,7 @@ def system_page(sys_name):
     
     active_tab = 'st-tab' if not st_tab_disabled else 'fb-tab'
     
-    map_fig = make_station_map(api)
 
-    top_row = make_top_row(api)
     
     
     station_tab = dbc.Tab(label='Stations', tab_id='st-tab', disabled=st_tab_disabled ,children=[
@@ -202,8 +227,20 @@ def system_page(sys_name):
 #         dbc.Tooltip(fb_tab_text, target="fb-tab")
 #     ]
     tooltips = []
+    
+    
+    return [tabs] + tooltips
+    
+    
+def system_page(sys_name):
 
+    """
+    Make base system page. Elements will be generated with callbacks
+    """
+    
+    api = br.LiveAPI(sys_name, echo=True)
 
+    sys_info = api.info
 
     layout = dbc.Row([
         dbc.Col([
@@ -212,14 +249,14 @@ def system_page(sys_name):
             html.Hr(),
             ], width=12),
 
-        dbc.Col(top_row, width=12),
-        dbc.Col(map_fig, width=12),
-        dbc.Col([tabs] + tooltips, width=12)
 
+        dbc.Col(width=12, id='top_row'),
+        dbc.Col(width=12, id='map_fig'),
+        dbc.Spinner(dbc.Col(width=12, id='tabs'))  #This is slowest so only tabs needs the spinner
 
     ])
 
-    return layout
+    return html.Div([sidebar,layout])
 
 
 def make_top_row(api):
@@ -236,7 +273,7 @@ def make_top_row(api):
     dbc.CardBody(
         [
             html.H5("Total bikes", className="card-title"),
-            html.H1(
+            html.H3(
                 f"{bikes:,}",
                 className="card-text display-3",
             ),
@@ -251,7 +288,7 @@ def make_top_row(api):
     dbc.CardBody(
         [
             html.H5("Active Stations", className="card-title"),
-            html.H2(
+            html.H3(
                 f"{stations:,}",
                 className="card-text display-3",
             ),
