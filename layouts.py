@@ -261,10 +261,10 @@ def system_page(sys_name):
 
 def make_top_row(api):
     
-    bikes = api.get_station_trips(dt.datetime.now().replace(hour=4),freq='h')['num_bikes_available'].sum()
+    bikes = api.get_station_trips(api.now.replace(hour=4),freq='h')['num_bikes_available'].sum()
     
     try:
-        bikes = bikes + api.get_free_bike_trips(dt.datetime.now().replace(hour=4), freq='h')['num_bikes_available'].sum()
+        bikes = bikes + api.get_free_bike_trips(api.now.replace(hour=4), freq='h')['num_bikes_available'].sum()
     except TypeError:
         pass
     
@@ -297,7 +297,7 @@ def make_top_row(api):
 ]
         
     # This combines station and free bike trips
-    trips = api.get_system_trips(dt.datetime.now(),freq='y').sum(1)[0]  
+    trips = api.get_system_trips(api.now,freq='y').sum(1)[0]  
     card_content_trips = [
     #dbc.CardHeader("Card header"),
     dbc.CardBody(
