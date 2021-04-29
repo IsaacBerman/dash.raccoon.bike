@@ -46,6 +46,11 @@ def get_city_coords(city,country):
 
 
 def make_sidebar():
+    
+    
+    systems_df = br.get_systems()
+    systems_df = systems_df[systems_df['is_tracking']]
+    
     sidebar = html.Div(
             [
         #         dcc.Link(href="/", children=html.H2("bikeraccoon", className="display-5", style={'font-family':'Courier New'})),
@@ -59,7 +64,7 @@ def make_sidebar():
                 ),
                 dbc.Nav(
                     [
-                        dbc.NavLink(f"{system['brand']} ({system['city']})", href=f"/live/{system['name']}", style={'color':BLUE}) for system in br.get_systems().to_dict('records')
+                        dbc.NavLink(f"{system['brand']} ({system['city']})", href=f"/live/{system['name']}", style={'color':BLUE}) for system in systems_df.to_dict('records')
 
                     ],
                     vertical=True,
@@ -88,6 +93,7 @@ def make_live_home_page():
         return '<br>----<br>'.join(x)
     
     cdf = br.get_systems()
+    cdf = cdf[cdf['is_tracking']]
     cdf['coords'] = cdf.apply(lambda x: get_city_coords(x['city'],x['country']), axis=1)
     cdf['link'] = cdf.apply(lambda x: f"<a target='_self' style='color:white;' href='/live/{x['name']}'>{x['brand']}</a>",axis=1)
     
@@ -327,11 +333,9 @@ def make_top_row(api):
     [
         dbc.Row(
             [
-                dbc.Col(dbc.Card(card_content_bikes, color=RED, inverse=True)),
-                dbc.Col(
-                    dbc.Card(card_content_stations, color=GREEN, inverse=True)
-                ),
-                dbc.Col(dbc.Card(card_content_trips, color=PURPLE, inverse=True)),
+                dbc.Col(dbc.Card(card_content_bikes, color=RED, inverse=True),  width=12, md=4),
+                dbc.Col(dbc.Card(card_content_stations, color=GREEN, inverse=True), width=12, md=4),
+                dbc.Col(dbc.Card(card_content_trips, color=PURPLE, inverse=True), width=12, md=4),
             ],
             className="mb-4",
         ),
