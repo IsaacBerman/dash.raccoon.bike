@@ -45,38 +45,39 @@ def get_city_coords(city,country):
     return lat,lon
 
 
-sidebar = html.Div(
-        [
-    #         dcc.Link(href="/", children=html.H2("bikeraccoon", className="display-5", style={'font-family':'Courier New'})),
-            html.H2(dcc.Link(href="/", children="raccoon.bike",style={"color": "black", "text-decoration": "none"}), className="display-5", style={'font-family':'Courier New'}),
-            #html.Img(src='data:image/png;base64,{}'.format(encoded_logo.decode()), style={'width': '100%'}),
-            #html.Img(src=app.get_asset_url('logo.png'), style={'width':'100%'}),
-            html.Img(src='/logo.png', style={'width':'100%'}),
-            html.Hr(),
-            html.P(
-                "Real-time monitoring of bike share systems", className="lead"
-            ),
-            dbc.Nav(
-                [
-                    dbc.NavLink(f"{system['brand']} ({system['city']})", href=f"/live/{system['name']}", style={'color':BLUE}) for system in br.get_systems().to_dict('records')
+def make_sidebar():
+    sidebar = html.Div(
+            [
+        #         dcc.Link(href="/", children=html.H2("bikeraccoon", className="display-5", style={'font-family':'Courier New'})),
+                html.H2(dcc.Link(href="/", children="raccoon.bike",style={"color": "black", "text-decoration": "none"}), className="display-5", style={'font-family':'Courier New'}),
+                #html.Img(src='data:image/png;base64,{}'.format(encoded_logo.decode()), style={'width': '100%'}),
+                #html.Img(src=app.get_asset_url('logo.png'), style={'width':'100%'}),
+                html.Img(src='/logo.png', style={'width':'100%'}),
+                html.Hr(),
+                html.P(
+                    "Real-time monitoring of bike share systems", className="lead"
+                ),
+                dbc.Nav(
+                    [
+                        dbc.NavLink(f"{system['brand']} ({system['city']})", href=f"/live/{system['name']}", style={'color':BLUE}) for system in br.get_systems().to_dict('records')
 
-                ],
-                vertical=True,
-                pills=True,
-            ),
+                    ],
+                    vertical=True,
+                    pills=True,
+                ),
 
-            html.Hr(),
-            dcc.Link(href='/about/', children='About',style={"color": BLUE}), 
-
-
-        ],
+                html.Hr(),
+                dcc.Link(href='/about/', children='About',style={"color": BLUE}), 
 
 
-    #    style=SIDEBAR_STYLE,
-        id='sidebar'
-    )
+            ],
 
 
+        #    style=SIDEBAR_STYLE,
+            id='sidebar'
+        )
+
+    return sidebar
 
 
 def make_live_home_page():
@@ -92,7 +93,7 @@ def make_live_home_page():
     
     cdf = cdf.groupby('city').agg({'link':linkagg, 'coords':'first'})
     
-                                              
+    sidebar = make_sidebar()
 
 #     sdf = pd.concat([br.LiveAPI(sys_name).get_stations() for sys_name in br.get_systems()['name']])
     
@@ -153,10 +154,9 @@ def make_live_home_page():
     
     
 def make_tabs(api):
-    sdf = api.get_system_trips(t1=api.now-dt.timedelta(hours=24),t2=api.now,freq='d')
+    sdf = api.get_station_trips(t1=api.now-dt.timedelta(hours=24),t2=api.now,freq='d')
 
     bdf = api.get_free_bike_trips(t1=api.now-dt.timedelta(hours=24),t2=api.now,freq='d')
-
 
     st_tab_disabled = True if sdf is None else False
     fb_tab_disabled = True if bdf is None else False
@@ -256,12 +256,19 @@ def system_page(sys_name):
 
     ])
 
+    sidebar = make_sidebar()
+    
     return html.Div([sidebar,layout])
 
 
 def make_top_row(api):
     
-    bikes = api.get_station_trips(api.now.replace(hour=4),freq='h')['num_bikes_available'].sum()
+    bikes = 0
+    
+    try:
+        bikes = api.get_station_trips(api.now.replace(hour=4),freq='h')['num_bikes_available'].sum()
+    except TypeError:
+        pass
     
     try:
         bikes = bikes + api.get_free_bike_trips(api.now.replace(hour=4), freq='h')['num_bikes_available'].sum()
@@ -282,7 +289,11 @@ def make_top_row(api):
 ]
     
     sdf = api.get_stations()
-    stations = len(sdf[sdf['active']])
+    try:
+        stations = len(sdf[sdf['active']])
+    except TypeError:
+        stations = 0
+        
     card_content_stations = [
     #dbc.CardHeader("Active Stations"),
     dbc.CardBody(
@@ -395,9 +406,7 @@ def make_station_map(api):
     sdf = api.get_stations()
     bdf = api.query_free_bikes()
     
-    tdf = api.get_station_trips(t1=api.now,freq='d',station='all')
 
-    sdf = pd.merge(sdf,tdf,on='station_id')
         
     # Get city location from OSM API
     city = api.info['city']
@@ -429,6 +438,8 @@ def make_station_map(api):
     
     if sdf is not None:
 
+        tdf = api.get_station_trips(t1=api.now,freq='d',station='all')
+        sdf = pd.merge(sdf,tdf,on='station_id')
         
         stationdata = go.Scattermapbox(lat=sdf['lat'],
                                    lon=sdf['lon'],
