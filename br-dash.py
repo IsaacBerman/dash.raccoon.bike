@@ -11,6 +11,7 @@ For more details on building multi-page Dash applications, check out the Dash
 documentation: https://dash.plot.ly/urls
 """
 import dash
+import sys
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
@@ -78,12 +79,7 @@ CONTENT_STYLE = {
 
 content = html.Div(id="page-content")
 
-footer = html.Div([
-                html.Hr(),
-                html.Span("© Mike Jarrett 2021", style={'float': 'right','margin':10})
-                ])
-
-app.layout = html.Div([dcc.Location(id="url"), content, footer])
+app.layout = html.Div([dcc.Location(id="url"), content])
 
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
@@ -128,21 +124,6 @@ def render_top_row(content,pathname):
     return top_row
    
     
-@app.callback(Output("map_fig", "children"), [Input("page-content", "children")],  [State("url", "pathname")])
-def render_map_fig(content,pathname):
-    sys_name = pathname.strip('/').split('/')[1]
-    
-    api = br.LiveAPI(sys_name, echo=True)
-
-    sys_info = api.info
-    
-    api.now = dt.datetime.utcnow().replace(minute=0, second=0, microsecond=0)
-    
-    api.now = pytz.timezone('UTC').localize(api.now).astimezone(pytz.timezone(sys_info['tz']))
-    
-    map_fig = make_station_map(api)
-
-    return map_fig
     
 @app.callback(Output("tabs", "children"), [Input("page-content", "children")],  [State("url", "pathname")])
 def render_tabs(content,pathname):
@@ -161,4 +142,5 @@ def render_tabs(content,pathname):
     return tabs    
 
 if __name__ == "__main__":
-    app.run_server(port=8050, host='0.0.0.0', debug=True)
+    ip = sys.argv[1]
+    app.run_server(port=8000, host=ip, debug=False)
