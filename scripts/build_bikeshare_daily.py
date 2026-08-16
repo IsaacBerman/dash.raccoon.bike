@@ -39,16 +39,30 @@ to normal only when the schema changes in January 2024. That whole run is
 withheld -- see UNRELIABLE_USER_SPLIT for the evidence. `trips` is unaffected
 throughout; only the attribution of trips to rider type is lost.
 
-Usage -- re-run when the City publishes another year, after dropping the new
-`bikeshare-ridership-YYYY.zip` into ~/Downloads:
+Usage -- when the City publishes new data:
 
-    python scripts/build_bikeshare_daily.py \
-        data/bikeshare_daily.csv \
-        ../toronto-bike-counters/public/bikeshare-daily.json
+ 1. Download the yearly file(s) from
+    open.toronto.ca/dataset/bike-share-toronto-ridership-data and leave them in
+    ~/Downloads named `bikeshare-ridership-YYYY.zip`. A re-published year just
+    replaces the old zip. Browser copies ("... (1).zip") are ignored, so a
+    second download can't be counted twice.
+ 2. Run, from the repo root:
 
-Read the run's closing report, not just its exit status: per-year totals, the
-count of days with no data, and any "!! dropped rows" note are how a silent
-format change shows up.
+        ./venv/bin/python scripts/build_bikeshare_daily.py \
+            data/bikeshare_daily.csv \
+            ../toronto-bike-counters/public/bikeshare-daily.json
+
+    Takes about twelve minutes for the full decade. Both outputs are rewritten
+    from scratch, so partial years and corrections are picked up automatically;
+    the web app reads the JSON with no other change needed.
+ 3. Read the closing report rather than just the exit status. Per-year totals,
+    the count of days with no data, and any "!! dropped rows" or "!! mixed date
+    orientation" note are how a silent format change announces itself. Every
+    row read must land on a day; a shortfall means this parser met a date shape
+    it doesn't know.
+
+Nothing here is pinned to a particular year: the archives present in ~/Downloads
+are what gets processed.
 """
 
 import csv
@@ -436,11 +450,17 @@ def main():
         print(xlsx_2016.name)
         read_xlsx_2016(xlsx_2016)
 
-    for year in range(2017, 2027):
-        z = DOWNLOADS / f"bikeshare-ridership-{year}.zip"
-        if not z.exists():
-            print(f"!! missing {z.name}")
-            continue
+    # Whatever years are actually sitting in Downloads, so next year's release
+    # is picked up by dropping the zip in rather than editing this file. Copies
+    # the browser renamed -- "...-2027 (1).zip" -- are ignored, so a re-download
+    # can't be counted twice.
+    zips = sorted(z for z in DOWNLOADS.glob("bikeshare-ridership-[0-9][0-9][0-9][0-9].zip"))
+    if not zips:
+        print("!! no bikeshare-ridership-YYYY.zip files found in ~/Downloads")
+    years = [int(z.stem.rsplit("-", 1)[1]) for z in zips]
+    print(f"Found {len(zips)} yearly archives: "
+          f"{', '.join(str(y) for y in years)}\n")
+    for z in zips:
         print(z.name)
         walk_zip(z)
 
